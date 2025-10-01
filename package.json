@@ -1,6 +1,6 @@
 {
   "name": "photofriend",
-  "version": "1.0.0",
+  "version": "0.2.0",
   "description": "A web app for managing and organizing photos with metadata",
   "main": "server.js",
   "scripts": {

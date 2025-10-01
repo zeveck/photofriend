@@ -135,6 +135,36 @@
             cursor: not-allowed;
         }
 
+        .btn-small {
+            background: #f0f0f0;
+            color: #333;
+            border: 1px solid #ddd;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 10px;
+            transition: background 0.2s;
+        }
+
+        .btn-small:hover {
+            background: #e0e0e0;
+        }
+
+        .form-group select {
+            width: calc(100% - 120px);
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
         .gallery {
             background: white;
             border-radius: 15px;
@@ -155,6 +185,154 @@
             display: flex;
             align-items: center;
             gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .album-filter {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+
+        .album-filter label {
+            color: #666;
+            font-weight: 500;
+        }
+
+        .album-filter select {
+            padding: 5px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            background: white;
+            cursor: pointer;
+        }
+
+        .album-drops {
+            display: none;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 2px dashed transparent;
+        }
+
+        .album-drops.active {
+            display: block;
+            border-color: #667eea;
+        }
+
+        .album-drops-title {
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .album-drop-zones {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .album-drop-zone {
+            padding: 10px 15px;
+            background: white;
+            border: 2px dashed #ddd;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            min-width: 100px;
+            text-align: center;
+        }
+
+        .album-drop-zone:hover {
+            border-color: #667eea;
+            background: #f0f2ff;
+        }
+
+        .album-drop-zone.drag-over {
+            border-color: #764ba2;
+            background: #e8ebff;
+            transform: scale(1.05);
+        }
+
+        .photo-item.dragging {
+            opacity: 0.5;
+            transform: rotate(5deg);
+        }
+
+        .photo-item.selected {
+            border: 3px solid #667eea;
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
+        }
+
+        .photo-item .selection-checkbox {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            width: 20px;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px solid #ddd;
+            border-radius: 3px;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: #667eea;
+        }
+
+        .photo-item .album-overlay {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            font-weight: 500;
+            text-transform: capitalize;
+            pointer-events: none;
+            max-width: 80px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .photo-item:hover .selection-checkbox,
+        .photo-item.selected .selection-checkbox {
+            display: flex;
+        }
+
+        .bulk-actions {
+            display: none;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .bulk-actions.active {
+            display: flex;
+        }
+
+        .bulk-actions-info {
+            color: #666;
+            font-weight: 500;
+        }
+
+        .bulk-move-select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9rem;
         }
         
         .sort-toggle {
@@ -254,25 +432,36 @@
         }
 
         .modal-content {
-            background: white;
+            background: #111;
             border-radius: 15px;
-            max-width: 900px;
-            width: 100%;
-            max-height: 90vh;
-            overflow: auto;
+            width: 95vw;
+            height: 95vh;
+            overflow: hidden;
             position: relative;
+            display: flex;
         }
 
         .modal-close {
             position: absolute;
             top: 15px;
             right: 15px;
-            background: none;
+            background: rgba(0, 0, 0, 0.5);
             border: none;
             font-size: 30px;
             cursor: pointer;
-            color: #666;
-            z-index: 1;
+            color: #fff;
+            z-index: 10;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s;
+        }
+
+        .modal-close:hover {
+            background: rgba(0, 0, 0, 0.8);
         }
 
         .modal-image-container {
@@ -280,29 +469,38 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 400px;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
         }
 
         .modal-image {
             max-width: 100%;
-            max-height: 600px;
+            max-height: 100%;
+            object-fit: contain;
             display: block;
         }
 
         .modal-details {
-            padding: 20px;
+            width: 350px;
+            background: white;
+            padding: 30px;
+            overflow-y: auto;
+            border-left: 1px solid #e0e0e0;
         }
 
         .detail-row {
-            display: flex;
-            padding: 10px 0;
+            padding: 12px 0;
             border-bottom: 1px solid #f0f0f0;
         }
 
         .detail-label {
             font-weight: 600;
             color: #666;
-            width: 120px;
+            margin-bottom: 5px;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .detail-value {
@@ -359,6 +557,76 @@
             display: block;
         }
         
+        .crop-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: none;
+            pointer-events: none;
+        }
+
+        .crop-overlay.active {
+            display: block;
+            pointer-events: auto;
+        }
+
+        .crop-box {
+            position: absolute;
+            border: 2px solid #fff;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+            cursor: move;
+            background: transparent;
+        }
+
+        .crop-handle {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: #fff;
+            border: 1px solid #000;
+            border-radius: 50%;
+        }
+
+        .crop-handle.nw { top: -6px; left: -6px; cursor: nw-resize; }
+        .crop-handle.ne { top: -6px; right: -6px; cursor: ne-resize; }
+        .crop-handle.sw { bottom: -6px; left: -6px; cursor: sw-resize; }
+        .crop-handle.se { bottom: -6px; right: -6px; cursor: se-resize; }
+
+        .crop-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 100;
+        }
+
+        .crop-btn {
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.3s;
+        }
+
+        .crop-btn:hover {
+            background: white;
+        }
+
+        .crop-btn.primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .crop-btn.primary:hover {
+            background: #764ba2;
+        }
+
         .version {
             position: fixed;
             bottom: 10px;
@@ -408,6 +676,14 @@
                     <textarea id="photoDescription" placeholder="Tell the story behind this photo..."></textarea>
                 </div>
                 
+                <div class="form-group">
+                    <label for="photoAlbum">Album</label>
+                    <select id="photoAlbum">
+                        <option value="default">Default</option>
+                    </select>
+                    <button type="button" class="btn-small" id="newAlbumBtn">+ New Album</button>
+                </div>
+                
                 <button class="btn" id="uploadBtn">Upload Photos</button>
             </div>
             
@@ -418,6 +694,12 @@
             <div class="gallery-header">
                 <h2 class="gallery-title">Photo Album</h2>
                 <div class="gallery-controls">
+                    <div class="album-filter">
+                        <label for="albumFilter">Filter by Album:</label>
+                        <select id="albumFilter">
+                            <option value="">All Albums</option>
+                        </select>
+                    </div>
                     <div class="sort-toggle" id="sortToggle">
                         <span>Sort:</span>
                         <span id="sortLabel">Newest First</span>
@@ -425,6 +707,21 @@
                     </div>
                     <span class="photo-count" id="photoCount">0 photos</span>
                 </div>
+            </div>
+            
+            <div class="bulk-actions" id="bulkActions">
+                <span class="bulk-actions-info" id="bulkActionsInfo">0 photos selected</span>
+                <select class="bulk-move-select" id="bulkMoveSelect">
+                    <option value="">Move to album...</option>
+                </select>
+                <button type="button" class="btn" id="bulkMoveBtn">Move Selected</button>
+                <button type="button" class="btn" id="selectAllBtn">Select All</button>
+                <button type="button" class="btn" id="deselectAllBtn">Deselect All</button>
+            </div>
+            
+            <div class="album-drops" id="albumDrops">
+                <div class="album-drops-title">Drop photos here to move them to an album:</div>
+                <div class="album-drop-zones" id="albumDropZones"></div>
             </div>
             
             <div class="photo-grid" id="photoGrid">
@@ -441,6 +738,18 @@
             <button class="modal-close" id="modalClose">&times;</button>
             <div class="modal-image-container">
                 <img class="modal-image" id="modalImage" src="" alt="">
+                <div class="crop-overlay" id="cropOverlay">
+                    <div class="crop-box" id="cropBox">
+                        <div class="crop-handle nw"></div>
+                        <div class="crop-handle ne"></div>
+                        <div class="crop-handle sw"></div>
+                        <div class="crop-handle se"></div>
+                    </div>
+                </div>
+                <div class="crop-controls" id="cropControls" style="display: none;">
+                    <button class="crop-btn" id="cancelCropBtn">Cancel</button>
+                    <button class="crop-btn primary" id="applyCropBtn">Apply Crop</button>
+                </div>
             </div>
             <div class="modal-details" id="modalDetails"></div>
         </div>
@@ -450,6 +759,10 @@
         let selectedFiles = [];
         let photos = [];
         let sortNewestFirst = localStorage.getItem('sortNewestFirst') !== 'false'; // Default to true
+        let currentAlbumFilter = ''; // Empty means show all albums
+        let isDragging = false;
+        let draggedPhoto = null;
+        let selectedPhotos = new Set();
 
         // Set today's date as default
         document.getElementById('photoDate').valueAsDate = new Date();
@@ -522,6 +835,7 @@
             const location = document.getElementById('photoLocation').value;
             const tags = document.getElementById('photoTags').value;
             const description = document.getElementById('photoDescription').value;
+            const album = document.getElementById('photoAlbum').value;
 
             const formData = new FormData();
             selectedFiles.forEach((file, index) => {
@@ -532,6 +846,7 @@
             formData.append('location', location);
             formData.append('tags', tags);
             formData.append('description', description);
+            formData.append('album', album);
 
             uploadBtn.disabled = true;
             uploadBtn.textContent = 'Uploading...';
@@ -577,6 +892,175 @@
             document.getElementById('photoLocation').value = '';
             document.getElementById('photoTags').value = '';
             document.getElementById('photoDescription').value = '';
+            document.getElementById('photoAlbum').value = 'default';
+        }
+
+        async function loadAlbums() {
+            try {
+                const response = await fetch('/api/albums');
+                const albums = await response.json();
+                const albumSelect = document.getElementById('photoAlbum');
+                const albumFilter = document.getElementById('albumFilter');
+                const bulkMoveSelect = document.getElementById('bulkMoveSelect');
+                
+                // Clear existing options
+                albumSelect.innerHTML = '<option value="default">Default</option>';
+                albumFilter.innerHTML = '<option value="">All Albums</option>';
+                bulkMoveSelect.innerHTML = '<option value="">Move to album...</option>';
+                
+                // Add other albums to both dropdowns
+                albums.forEach(album => {
+                    const displayName = album.name.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    
+                    // Upload form dropdown
+                    if (album.name !== 'default') {
+                        const option = document.createElement('option');
+                        option.value = album.name;
+                        option.textContent = displayName;
+                        albumSelect.appendChild(option);
+                    }
+                    
+                    // Filter dropdown (include default)
+                    const filterOption = document.createElement('option');
+                    filterOption.value = album.name;
+                    filterOption.textContent = `${displayName} (${album.photoCount})`;
+                    albumFilter.appendChild(filterOption);
+                    
+                    // Bulk move dropdown (include all albums)
+                    const bulkMoveOption = document.createElement('option');
+                    bulkMoveOption.value = album.name;
+                    bulkMoveOption.textContent = displayName;
+                    bulkMoveSelect.appendChild(bulkMoveOption);
+                });
+                
+                // Populate album drop zones
+                populateDropZones(albums);
+            } catch (error) {
+                console.error('Error loading albums:', error);
+            }
+        }
+
+        async function createNewAlbum() {
+            const name = prompt('Enter album name:');
+            if (!name || !name.trim()) return;
+            
+            try {
+                const response = await fetch('/api/albums', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name: name.trim() })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    loadAlbums(); // Refresh album list
+                    document.getElementById('photoAlbum').value = result.album.name;
+                } else {
+                    const error = await response.json();
+                    alert(error.error || 'Failed to create album');
+                }
+            } catch (error) {
+                console.error('Error creating album:', error);
+                alert('Error creating album');
+            }
+        }
+
+        // Add event listener for new album button
+        document.getElementById('newAlbumBtn').addEventListener('click', createNewAlbum);
+
+        // Add event listener for album filter
+        document.getElementById('albumFilter').addEventListener('change', (e) => {
+            currentAlbumFilter = e.target.value;
+            displayPhotos();
+        });
+
+        function populateDropZones(albums) {
+            const dropZones = document.getElementById('albumDropZones');
+            dropZones.innerHTML = '';
+            
+            albums.forEach(album => {
+                const displayName = album.name.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                const dropZone = document.createElement('div');
+                dropZone.className = 'album-drop-zone';
+                dropZone.dataset.album = album.name;
+                dropZone.textContent = displayName;
+                
+                // Add drop event listeners
+                dropZone.addEventListener('dragover', handleDropZoneDragOver);
+                dropZone.addEventListener('dragleave', handleDropZoneDragLeave);
+                dropZone.addEventListener('drop', handleDropZoneDrop);
+                
+                dropZones.appendChild(dropZone);
+            });
+        }
+
+        function handleDropZoneDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('drag-over');
+        }
+
+        function handleDropZoneDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+
+        async function handleDropZoneDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+            
+            const targetAlbum = e.currentTarget.dataset.album;
+            
+            if (draggedPhoto && targetAlbum) {
+                await movePhotoToAlbum(draggedPhoto.filename, targetAlbum);
+            }
+            
+            hideDropZones();
+        }
+
+        async function movePhotoToAlbum(filename, targetAlbum) {
+            try {
+                const response = await fetch(`/api/photos/${filename}/move`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ targetAlbum })
+                });
+                
+                if (response.ok) {
+                    // Update local photos array
+                    const photoIndex = photos.findIndex(p => p.filename === filename);
+                    if (photoIndex !== -1) {
+                        photos[photoIndex].album = targetAlbum;
+                    }
+                    
+                    // Refresh displays
+                    loadAlbums();
+                    displayPhotos();
+                } else {
+                    const error = await response.json();
+                    alert(error.error || 'Failed to move photo');
+                }
+            } catch (error) {
+                console.error('Error moving photo:', error);
+                alert('Error moving photo');
+            }
+        }
+
+        function showDropZones() {
+            document.getElementById('albumDrops').classList.add('active');
+        }
+
+        function hideDropZones() {
+            document.getElementById('albumDrops').classList.remove('active');
+            isDragging = false;
+            draggedPhoto = null;
+            
+            // Remove dragging class from all photos
+            document.querySelectorAll('.photo-item.dragging').forEach(item => {
+                item.classList.remove('dragging');
+            });
         }
 
         async function loadPhotos() {
@@ -590,11 +1074,17 @@
         }
 
         function displayPhotos() {
-            if (photos.length === 0) {
+            // Filter photos by album if a filter is set
+            let filteredPhotos = photos;
+            if (currentAlbumFilter) {
+                filteredPhotos = photos.filter(photo => (photo.album || 'default') === currentAlbumFilter);
+            }
+
+            if (filteredPhotos.length === 0) {
                 photoGrid.innerHTML = `
                     <div class="empty-state">
                         <div class="empty-state-icon">📷</div>
-                        <p>No photos yet. Upload some to get started!</p>
+                        <p>${currentAlbumFilter ? 'No photos in this album.' : 'No photos yet. Upload some to get started!'}</p>
                     </div>
                 `;
                 photoCount.textContent = '0 photos';
@@ -602,7 +1092,7 @@
                 photoGrid.innerHTML = '';
                 
                 // Sort photos by date
-                const sortedPhotos = [...photos].sort((a, b) => {
+                const sortedPhotos = [...filteredPhotos].sort((a, b) => {
                     const dateA = new Date(a.date || 0);
                     const dateB = new Date(b.date || 0);
                     return sortNewestFirst ? dateB - dateA : dateA - dateB;
@@ -611,22 +1101,68 @@
                 sortedPhotos.forEach((photo, index) => {
                     const photoItem = document.createElement('div');
                     photoItem.className = 'photo-item';
+                    photoItem.draggable = true;
+                    photoItem.dataset.filename = photo.filename;
+                    const albumName = photo.album || 'default';
+                    const showAlbumOverlay = albumName !== 'default';
+                    const albumDisplayName = albumName.replace(/-/g, ' ');
+
                     photoItem.innerHTML = `
-                        <img src="/photos/${photo.filename}" alt="${photo.title}">
+                        <div class="selection-checkbox" data-filename="${photo.filename}">
+                            ${selectedPhotos.has(photo.filename) ? '✓' : ''}
+                        </div>
+                        <img src="/photos/${albumName}/${photo.filename}" alt="${photo.title}">
+                        ${showAlbumOverlay ? `<div class="album-overlay">${albumDisplayName}</div>` : ''}
                         <div class="photo-info">
                             <div>${photo.title}</div>
                             <div style="font-size: 0.8rem;">${photo.date || ''}</div>
                         </div>
                     `;
-                    photoItem.addEventListener('click', () => showPhotoDetails(photo));
+                    
+                    // Check if this photo is selected
+                    if (selectedPhotos.has(photo.filename)) {
+                        photoItem.classList.add('selected');
+                    }
+                    
+                    // Add drag event listeners
+                    photoItem.addEventListener('dragstart', (e) => {
+                        isDragging = true;
+                        draggedPhoto = photo;
+                        photoItem.classList.add('dragging');
+                        showDropZones();
+                    });
+                    
+                    photoItem.addEventListener('dragend', (e) => {
+                        photoItem.classList.remove('dragging');
+                        if (!isDragging) {
+                            hideDropZones();
+                        }
+                    });
+                    
+                    // Add selection checkbox click handler
+                    const checkbox = photoItem.querySelector('.selection-checkbox');
+                    checkbox.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        togglePhotoSelection(photo.filename);
+                    });
+                    
+                    photoItem.addEventListener('click', (e) => {
+                        // If ctrl/cmd is held, toggle selection instead of showing details
+                        if (e.ctrlKey || e.metaKey) {
+                            togglePhotoSelection(photo.filename);
+                        } else {
+                            showPhotoDetails(photo);
+                        }
+                    });
+                    
                     photoGrid.appendChild(photoItem);
                 });
-                photoCount.textContent = `${photos.length} photo${photos.length !== 1 ? 's' : ''}`;
+                photoCount.textContent = `${filteredPhotos.length} photo${filteredPhotos.length !== 1 ? 's' : ''}${currentAlbumFilter ? ` in ${currentAlbumFilter}` : ''}`;
             }
         }
 
         function showPhotoDetails(photo) {
-            modalImage.src = `/photos/${photo.filename}`;
+            modalImage.src = `/photos/${photo.album || 'default'}/${photo.filename}`;
             modalImage.alt = photo.title;
             
             let detailsHTML = '';
@@ -639,6 +1175,16 @@
                 `;
             }
             
+            // Add Crop button
+            detailsHTML += `
+                <div class="detail-row">
+                    <button class="btn" id="cropBtn" style="width: 100%; margin-bottom: 10px;" onclick="startCrop('${photo.filename}')">✂️ Crop Image</button>
+                </div>
+                <div class="detail-row" id="undoCropRow-${photo.filename}" style="display: none;">
+                    <button class="btn" style="width: 100%; margin-bottom: 10px; background: #dc3545;" onclick="undoCrop('${photo.filename}')">↶ Undo Crop</button>
+                </div>
+            `;
+
             // Editable date field
             detailsHTML += `
                 <div class="detail-row">
@@ -687,6 +1233,9 @@
             
             modalDetails.innerHTML = detailsHTML;
             photoModal.classList.add('active');
+
+            // Check if backup exists for this photo
+            checkBackupExists(photo.filename);
         }
 
         modalClose.addEventListener('click', () => {
@@ -765,10 +1314,345 @@
         
         initSortToggle();
 
-        // Load photos on page load
+        function togglePhotoSelection(filename) {
+            if (selectedPhotos.has(filename)) {
+                selectedPhotos.delete(filename);
+            } else {
+                selectedPhotos.add(filename);
+            }
+            updateBulkActionsUI();
+            displayPhotos(); // Refresh to update selection styling
+        }
+
+        function selectAllPhotos() {
+            // Filter photos based on current view
+            let filteredPhotos = photos;
+            if (currentAlbumFilter) {
+                filteredPhotos = photos.filter(photo => (photo.album || 'default') === currentAlbumFilter);
+            }
+            
+            filteredPhotos.forEach(photo => selectedPhotos.add(photo.filename));
+            updateBulkActionsUI();
+            displayPhotos();
+        }
+
+        function deselectAllPhotos() {
+            selectedPhotos.clear();
+            updateBulkActionsUI();
+            displayPhotos();
+        }
+
+        function updateBulkActionsUI() {
+            const bulkActions = document.getElementById('bulkActions');
+            const bulkActionsInfo = document.getElementById('bulkActionsInfo');
+            
+            if (selectedPhotos.size > 0) {
+                bulkActions.classList.add('active');
+                bulkActionsInfo.textContent = `${selectedPhotos.size} photo${selectedPhotos.size !== 1 ? 's' : ''} selected`;
+            } else {
+                bulkActions.classList.remove('active');
+            }
+        }
+
+        async function bulkMovePhotos() {
+            const targetAlbum = document.getElementById('bulkMoveSelect').value;
+            if (!targetAlbum || selectedPhotos.size === 0) return;
+
+            const selectedArray = Array.from(selectedPhotos);
+            let successCount = 0;
+
+            for (const filename of selectedArray) {
+                try {
+                    const response = await fetch(`/api/photos/${filename}/move`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ targetAlbum })
+                    });
+
+                    if (response.ok) {
+                        // Update local photos array
+                        const photoIndex = photos.findIndex(p => p.filename === filename);
+                        if (photoIndex !== -1) {
+                            photos[photoIndex].album = targetAlbum;
+                        }
+                        successCount++;
+                    }
+                } catch (error) {
+                    console.error(`Error moving ${filename}:`, error);
+                }
+            }
+
+            // Clear selection and refresh
+            selectedPhotos.clear();
+            loadAlbums();
+            displayPhotos();
+            updateBulkActionsUI();
+            
+            // Photos moved successfully - no alert needed
+        }
+
+        // Add event listeners for bulk actions
+        document.getElementById('selectAllBtn').addEventListener('click', selectAllPhotos);
+        document.getElementById('deselectAllBtn').addEventListener('click', deselectAllPhotos);
+        document.getElementById('bulkMoveBtn').addEventListener('click', bulkMovePhotos);
+
+        // Crop functionality
+        let cropMode = false;
+        let currentCropPhoto = null;
+        let cropBox = null;
+        let cropOverlay = null;
+        let isDraggingCrop = false;
+        let isResizing = false;
+        let dragStartX = 0;
+        let dragStartY = 0;
+        let cropStartX = 0;
+        let cropStartY = 0;
+        let activeHandle = null;
+
+        function startCrop(filename) {
+            const photo = photos.find(p => p.filename === filename);
+            if (!photo) return;
+
+            currentCropPhoto = photo;
+            cropMode = true;
+
+            // Show crop overlay
+            cropOverlay = document.getElementById('cropOverlay');
+            cropBox = document.getElementById('cropBox');
+            const cropControls = document.getElementById('cropControls');
+            const modalImage = document.getElementById('modalImage');
+
+            cropOverlay.classList.add('active');
+            cropControls.style.display = 'flex';
+
+            // Wait for image to load and get dimensions
+            modalImage.onload = function() {
+                const imgRect = modalImage.getBoundingClientRect();
+                const containerRect = modalImage.parentElement.getBoundingClientRect();
+
+                // Calculate image position within container
+                const imgLeft = imgRect.left - containerRect.left;
+                const imgTop = imgRect.top - containerRect.top;
+
+                // Set initial crop box to center of image (square)
+                const size = Math.min(imgRect.width, imgRect.height) * 0.5;
+                const left = imgLeft + (imgRect.width - size) / 2;
+                const top = imgTop + (imgRect.height - size) / 2;
+
+                cropBox.style.left = left + 'px';
+                cropBox.style.top = top + 'px';
+                cropBox.style.width = size + 'px';
+                cropBox.style.height = size + 'px';
+            };
+
+            // Trigger load event if image already loaded
+            if (modalImage.complete) {
+                modalImage.onload();
+            }
+        }
+
+        window.startCrop = startCrop;
+
+        // Crop box dragging
+        document.getElementById('cropBox').addEventListener('mousedown', function(e) {
+            if (e.target.classList.contains('crop-handle')) {
+                isResizing = true;
+                activeHandle = e.target;
+                dragStartX = e.clientX;
+                dragStartY = e.clientY;
+                const rect = cropBox.getBoundingClientRect();
+                cropStartX = rect.left;
+                cropStartY = rect.top;
+            } else {
+                isDraggingCrop = true;
+                dragStartX = e.clientX - cropBox.offsetLeft;
+                dragStartY = e.clientY - cropBox.offsetTop;
+            }
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', function(e) {
+            if (isDraggingCrop) {
+                const modalImage = document.getElementById('modalImage');
+                const imgRect = modalImage.getBoundingClientRect();
+                const containerRect = modalImage.parentElement.getBoundingClientRect();
+
+                let newLeft = e.clientX - dragStartX;
+                let newTop = e.clientY - dragStartY;
+
+                // Constrain to image bounds
+                const imgLeft = imgRect.left - containerRect.left;
+                const imgTop = imgRect.top - containerRect.top;
+
+                newLeft = Math.max(imgLeft, Math.min(newLeft, imgLeft + imgRect.width - cropBox.offsetWidth));
+                newTop = Math.max(imgTop, Math.min(newTop, imgTop + imgRect.height - cropBox.offsetHeight));
+
+                cropBox.style.left = newLeft + 'px';
+                cropBox.style.top = newTop + 'px';
+            } else if (isResizing && activeHandle) {
+                const deltaX = e.clientX - dragStartX;
+                const deltaY = e.clientY - dragStartY;
+
+                // For square crop, use the larger delta
+                const delta = Math.max(Math.abs(deltaX), Math.abs(deltaY));
+                const sign = (deltaX + deltaY) > 0 ? 1 : -1;
+                const newSize = Math.max(50, parseInt(cropBox.style.width) + (delta * sign));
+
+                // Constrain to image bounds
+                const modalImage = document.getElementById('modalImage');
+                const imgRect = modalImage.getBoundingClientRect();
+                const containerRect = modalImage.parentElement.getBoundingClientRect();
+                const imgLeft = imgRect.left - containerRect.left;
+                const imgTop = imgRect.top - containerRect.top;
+
+                const maxSize = Math.min(
+                    imgRect.width - (cropBox.offsetLeft - imgLeft),
+                    imgRect.height - (cropBox.offsetTop - imgTop)
+                );
+
+                const finalSize = Math.min(newSize, maxSize);
+
+                cropBox.style.width = finalSize + 'px';
+                cropBox.style.height = finalSize + 'px';
+            }
+        });
+
+        document.addEventListener('mouseup', function() {
+            isDraggingCrop = false;
+            isResizing = false;
+            activeHandle = null;
+        });
+
+        // Cancel crop
+        document.getElementById('cancelCropBtn').addEventListener('click', function() {
+            cropMode = false;
+            currentCropPhoto = null;
+            document.getElementById('cropOverlay').classList.remove('active');
+            document.getElementById('cropControls').style.display = 'none';
+        });
+
+        // Apply crop
+        document.getElementById('applyCropBtn').addEventListener('click', async function() {
+            if (!currentCropPhoto || !cropMode) return;
+
+            const modalImage = document.getElementById('modalImage');
+            const imgRect = modalImage.getBoundingClientRect();
+            const containerRect = modalImage.parentElement.getBoundingClientRect();
+            const cropRect = cropBox.getBoundingClientRect();
+
+            // Calculate crop coordinates relative to original image
+            const imgLeft = imgRect.left - containerRect.left;
+            const imgTop = imgRect.top - containerRect.top;
+
+            const scaleX = modalImage.naturalWidth / imgRect.width;
+            const scaleY = modalImage.naturalHeight / imgRect.height;
+
+            const cropData = {
+                x: Math.round((cropBox.offsetLeft - imgLeft) * scaleX),
+                y: Math.round((cropBox.offsetTop - imgTop) * scaleY),
+                width: Math.round(cropBox.offsetWidth * scaleX),
+                height: Math.round(cropBox.offsetHeight * scaleY)
+            };
+
+            // Send crop request to server
+            try {
+                const response = await fetch(`/api/photos/${currentCropPhoto.filename}/crop`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(cropData)
+                });
+
+                if (response.ok) {
+                    // Save filename before clearing cropPhoto
+                    const croppedFilename = currentCropPhoto.filename;
+
+                    // Close crop mode
+                    cropMode = false;
+                    currentCropPhoto = null;
+                    document.getElementById('cropOverlay').classList.remove('active');
+                    document.getElementById('cropControls').style.display = 'none';
+
+                    // Reload photos to show cropped version
+                    await loadPhotos();
+                    displayPhotos();
+
+                    // Refresh the modal image
+                    const timestamp = new Date().getTime();
+                    modalImage.src = modalImage.src + '?t=' + timestamp;
+
+                    // Check if backup exists and show undo button
+                    checkBackupExists(croppedFilename);
+
+                    // Image cropped successfully - no alert needed
+                } else {
+                    const error = await response.json();
+                    alert('Failed to crop image: ' + (error.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error cropping image:', error);
+                alert('Error cropping image');
+            }
+        });
+
+        // Undo crop functionality
+        async function undoCrop(filename) {
+            try {
+                const response = await fetch(`/api/photos/${filename}/restore`, {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    // Reload photos to show restored version
+                    await loadPhotos();
+                    displayPhotos();
+
+                    // Refresh the modal image
+                    const timestamp = new Date().getTime();
+                    modalImage.src = modalImage.src.replace(/\?t=\d+/, '') + '?t=' + timestamp;
+
+                    // Hide the undo button since backup will be consumed
+                    const undoRow = document.getElementById(`undoCropRow-${filename}`);
+                    if (undoRow) {
+                        undoRow.style.display = 'none';
+                    }
+
+                    // Image restored successfully - no alert needed
+                } else {
+                    const error = await response.json();
+                    alert('Failed to restore image: ' + (error.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error restoring image:', error);
+                alert('Error restoring image');
+            }
+        }
+
+        window.undoCrop = undoCrop;
+
+        // Function to check if backup exists and show/hide undo button
+        async function checkBackupExists(filename) {
+            try {
+                const response = await fetch(`/api/photos/${filename}/backup`);
+                const data = await response.json();
+
+                const undoRow = document.getElementById(`undoCropRow-${filename}`);
+                if (undoRow) {
+                    undoRow.style.display = data.exists ? 'block' : 'none';
+                }
+            } catch (error) {
+                console.error('Error checking backup:', error);
+            }
+        }
+
+        // Load albums and photos on page load
+        loadAlbums();
         loadPhotos();
     </script>
     
-    <div class="version">v0.1.0</div>
+    <div class="version">v0.2.0</div>
 </body>
 </html>

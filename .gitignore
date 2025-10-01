@@ -1,6 +1,7 @@
 node_modules/
 photos/
-.devcontainer/
 *.log
 .DS_Store
 .env
+.mcp.json
+.playwright-mcp.json

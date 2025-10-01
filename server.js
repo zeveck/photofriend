@@ -13,6 +13,9 @@ if (!fs.existsSync(photosDir)) {
     fs.mkdirSync(photosDir);
 }
 
+// Default album for existing photos
+const DEFAULT_ALBUM = 'default';
+
 // Store photo metadata
 const metadataFile = path.join(__dirname, 'photos', 'metadata.json');
 let photosMetadata = [];
@@ -21,10 +24,43 @@ let photosMetadata = [];
 if (fs.existsSync(metadataFile)) {
     try {
         photosMetadata = JSON.parse(fs.readFileSync(metadataFile, 'utf8'));
+        
+        // Migrate existing photos to have album field
+        let needsSave = false;
+        photosMetadata.forEach(photo => {
+            if (!photo.album) {
+                photo.album = DEFAULT_ALBUM;
+                needsSave = true;
+            }
+        });
+        
+        if (needsSave) {
+            fs.writeFileSync(metadataFile, JSON.stringify(photosMetadata, null, 2));
+        }
     } catch (err) {
         photosMetadata = [];
     }
 }
+
+// Ensure default album directory exists
+const defaultAlbumDir = path.join(photosDir, DEFAULT_ALBUM);
+if (!fs.existsSync(defaultAlbumDir)) {
+    fs.mkdirSync(defaultAlbumDir);
+}
+
+// Move existing photos to default album if they're in the root photos directory
+photosMetadata.forEach(photo => {
+    const oldPath = path.join(photosDir, photo.filename);
+    const newPath = path.join(photosDir, photo.album || DEFAULT_ALBUM, photo.filename);
+    
+    if (fs.existsSync(oldPath) && !fs.existsSync(newPath)) {
+        try {
+            fs.renameSync(oldPath, newPath);
+        } catch (err) {
+            console.error(`Failed to move ${photo.filename} to album:`, err);
+        }
+    }
+});
 
 // Configure multer for file uploads (now using memory storage for processing)
 const storage = multer.memoryStorage();
@@ -47,7 +83,7 @@ const upload = multer({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static files
+// Serve static files with album support
 app.use('/photos', express.static(photosDir));
 
 // Serve the main HTML file
@@ -62,7 +98,7 @@ app.post('/upload', upload.array('photos', 10), async (req, res) => {
             return res.status(400).json({ error: 'No files uploaded' });
         }
 
-        const { title, date, location, tags, description } = req.body;
+        const { title, date, location, tags, description, album } = req.body;
         const processedFiles = [];
 
         // Process each uploaded file
@@ -70,10 +106,18 @@ app.post('/upload', upload.array('photos', 10), async (req, res) => {
             // Generate filename based on metadata
             const fileTitle = title || 'untitled';
             const fileDate = date || new Date().toISOString().split('T')[0];
+            const fileAlbum = album || DEFAULT_ALBUM;
             const sanitizedTitle = fileTitle.toLowerCase().replace(/[^a-z0-9]/g, '-');
             const timestamp = Date.now();
             const filename = `${fileDate}_${sanitizedTitle}_${timestamp}.jpg`;
-            const filepath = path.join(photosDir, filename);
+            
+            // Ensure album directory exists
+            const albumDir = path.join(photosDir, fileAlbum);
+            if (!fs.existsSync(albumDir)) {
+                fs.mkdirSync(albumDir, { recursive: true });
+            }
+            
+            const filepath = path.join(albumDir, filename);
 
             try {
                 // Process image with sharp
@@ -95,6 +139,7 @@ app.post('/upload', upload.array('photos', 10), async (req, res) => {
                     location: location || '',
                     tags: tags || '',
                     description: description || '',
+                    album: fileAlbum,
                     uploadedAt: new Date().toISOString(),
                     size: file.size,
                     mimetype: 'image/jpeg'
@@ -106,7 +151,7 @@ app.post('/upload', upload.array('photos', 10), async (req, res) => {
                 // Try to save without processing as fallback
                 const fallbackExt = path.extname(file.originalname) || '.jpg';
                 const fallbackFilename = `${fileDate}_${sanitizedTitle}_${timestamp}${fallbackExt}`;
-                const fallbackPath = path.join(photosDir, fallbackFilename);
+                const fallbackPath = path.join(albumDir, fallbackFilename);
                 fs.writeFileSync(fallbackPath, file.buffer);
                 
                 const photoData = {
@@ -117,6 +162,7 @@ app.post('/upload', upload.array('photos', 10), async (req, res) => {
                     location: location || '',
                     tags: tags || '',
                     description: description || '',
+                    album: fileAlbum,
                     uploadedAt: new Date().toISOString(),
                     size: file.size,
                     mimetype: file.mimetype
@@ -186,10 +232,11 @@ app.patch('/api/photos/:filename', (req, res) => {
         const extension = path.extname(oldFilename) || '.jpg';
         newFilename = `${req.body.date}_${sanitizedTitle}_${timestamp}${extension}`;
         
-        // Rename the physical file
-        const oldPath = path.join(photosDir, oldFilename);
-        const newPath = path.join(photosDir, newFilename);
-        
+        // Rename the physical file (including album directory)
+        const albumDir = photo.album || DEFAULT_ALBUM;
+        const oldPath = path.join(photosDir, albumDir, oldFilename);
+        const newPath = path.join(photosDir, albumDir, newFilename);
+
         try {
             if (fs.existsSync(oldPath)) {
                 fs.renameSync(oldPath, newPath);
@@ -230,8 +277,9 @@ app.delete('/api/photos/:filename', (req, res) => {
         return res.status(404).json({ error: 'Photo not found' });
     }
 
-    // Delete file
-    const filePath = path.join(photosDir, filename);
+    const photo = photosMetadata[photoIndex];
+    // Delete file from album directory
+    const filePath = path.join(photosDir, photo.album || DEFAULT_ALBUM, filename);
     if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
     }
@@ -241,6 +289,274 @@ app.delete('/api/photos/:filename', (req, res) => {
     fs.writeFileSync(metadataFile, JSON.stringify(photosMetadata, null, 2));
 
     res.json({ success: true, message: 'Photo deleted successfully' });
+});
+
+// Get all albums
+app.get('/api/albums', (req, res) => {
+    try {
+        const albums = [];
+        const entries = fs.readdirSync(photosDir, { withFileTypes: true });
+        
+        for (const entry of entries) {
+            if (entry.isDirectory()) {
+                const albumPath = path.join(photosDir, entry.name);
+                const photos = photosMetadata.filter(p => p.album === entry.name);
+                albums.push({
+                    name: entry.name,
+                    photoCount: photos.length,
+                    isDefault: entry.name === DEFAULT_ALBUM
+                });
+            }
+        }
+        
+        res.json(albums);
+    } catch (error) {
+        console.error('Error getting albums:', error);
+        res.status(500).json({ error: 'Failed to get albums' });
+    }
+});
+
+// Create new album
+app.post('/api/albums', (req, res) => {
+    try {
+        const { name } = req.body;
+        
+        if (!name || !name.trim()) {
+            return res.status(400).json({ error: 'Album name is required' });
+        }
+        
+        // Sanitize album name for filesystem
+        const sanitizedName = name.trim().toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-');
+        
+        if (!sanitizedName) {
+            return res.status(400).json({ error: 'Invalid album name' });
+        }
+        
+        const albumPath = path.join(photosDir, sanitizedName);
+        
+        if (fs.existsSync(albumPath)) {
+            return res.status(409).json({ error: 'Album already exists' });
+        }
+        
+        fs.mkdirSync(albumPath);
+        res.json({ 
+            success: true, 
+            message: 'Album created successfully',
+            album: {
+                name: sanitizedName,
+                photoCount: 0,
+                isDefault: false
+            }
+        });
+    } catch (error) {
+        console.error('Error creating album:', error);
+        res.status(500).json({ error: 'Failed to create album' });
+    }
+});
+
+// Delete album
+app.delete('/api/albums/:name', (req, res) => {
+    try {
+        const albumName = req.params.name;
+        
+        if (albumName === DEFAULT_ALBUM) {
+            return res.status(400).json({ error: 'Cannot delete default album' });
+        }
+        
+        const albumPath = path.join(photosDir, albumName);
+        
+        if (!fs.existsSync(albumPath)) {
+            return res.status(404).json({ error: 'Album not found' });
+        }
+        
+        // Check if album has photos
+        const photosInAlbum = photosMetadata.filter(p => p.album === albumName);
+        if (photosInAlbum.length > 0) {
+            return res.status(400).json({ error: 'Cannot delete album with photos. Move photos first.' });
+        }
+        
+        // Check if directory is empty
+        const files = fs.readdirSync(albumPath);
+        if (files.length > 0) {
+            return res.status(400).json({ error: 'Album directory is not empty' });
+        }
+        
+        fs.rmdirSync(albumPath);
+        res.json({ success: true, message: 'Album deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting album:', error);
+        res.status(500).json({ error: 'Failed to delete album' });
+    }
+});
+
+// Crop photo
+app.post('/api/photos/:filename/crop', async (req, res) => {
+    try {
+        const filename = req.params.filename;
+        const { x, y, width, height } = req.body;
+
+        // Validate crop parameters
+        if (!x && x !== 0 || !y && y !== 0 || !width || !height) {
+            return res.status(400).json({ error: 'Invalid crop parameters' });
+        }
+
+        const photoIndex = photosMetadata.findIndex(p => p.filename === filename);
+        if (photoIndex === -1) {
+            return res.status(404).json({ error: 'Photo not found' });
+        }
+
+        const photo = photosMetadata[photoIndex];
+        const albumDir = photo.album || DEFAULT_ALBUM;
+        const filePath = path.join(photosDir, albumDir, filename);
+
+        if (!fs.existsSync(filePath)) {
+            return res.status(404).json({ error: 'Photo file not found' });
+        }
+
+        // Create a backup of the original file
+        const backupPath = filePath + '.backup';
+        if (!fs.existsSync(backupPath)) {
+            fs.copyFileSync(filePath, backupPath);
+        }
+
+        // Perform the crop using sharp
+        await sharp(filePath)
+            .extract({ left: x, top: y, width: width, height: height })
+            .jpeg({ quality: 90, progressive: true })
+            .toFile(filePath + '.tmp');
+
+        // Replace original with cropped version
+        fs.renameSync(filePath + '.tmp', filePath);
+
+        res.json({
+            success: true,
+            message: 'Photo cropped successfully',
+            filename: filename
+        });
+    } catch (error) {
+        console.error('Error cropping photo:', error);
+        res.status(500).json({ error: 'Failed to crop photo: ' + error.message });
+    }
+});
+
+// Check if photo has a backup (for undo crop)
+app.get('/api/photos/:filename/backup', (req, res) => {
+    try {
+        const filename = req.params.filename;
+        const photoIndex = photosMetadata.findIndex(p => p.filename === filename);
+
+        if (photoIndex === -1) {
+            return res.status(404).json({ error: 'Photo not found' });
+        }
+
+        const photo = photosMetadata[photoIndex];
+        const albumDir = photo.album || DEFAULT_ALBUM;
+        const filePath = path.join(photosDir, albumDir, filename);
+        const backupPath = filePath + '.backup';
+
+        const hasBackup = fs.existsSync(backupPath);
+
+        res.json({
+            exists: hasBackup,
+            filename: filename
+        });
+    } catch (error) {
+        console.error('Error checking backup:', error);
+        res.status(500).json({ error: 'Failed to check backup' });
+    }
+});
+
+// Restore photo from backup (undo crop)
+app.post('/api/photos/:filename/restore', async (req, res) => {
+    try {
+        const filename = req.params.filename;
+        const photoIndex = photosMetadata.findIndex(p => p.filename === filename);
+
+        if (photoIndex === -1) {
+            return res.status(404).json({ error: 'Photo not found' });
+        }
+
+        const photo = photosMetadata[photoIndex];
+        const albumDir = photo.album || DEFAULT_ALBUM;
+        const filePath = path.join(photosDir, albumDir, filename);
+        const backupPath = filePath + '.backup';
+
+        if (!fs.existsSync(backupPath)) {
+            return res.status(404).json({ error: 'No backup found for this photo' });
+        }
+
+        // Replace current image with backup
+        fs.copyFileSync(backupPath, filePath);
+
+        // Remove the backup after successful restore
+        fs.unlinkSync(backupPath);
+
+        res.json({
+            success: true,
+            message: 'Photo restored from backup successfully',
+            filename: filename
+        });
+    } catch (error) {
+        console.error('Error restoring from backup:', error);
+        res.status(500).json({ error: 'Failed to restore from backup: ' + error.message });
+    }
+});
+
+// Move photo to different album
+app.put('/api/photos/:filename/move', (req, res) => {
+    try {
+        const filename = req.params.filename;
+        const { targetAlbum } = req.body;
+        
+        if (!targetAlbum) {
+            return res.status(400).json({ error: 'Target album is required' });
+        }
+        
+        const photoIndex = photosMetadata.findIndex(p => p.filename === filename);
+        if (photoIndex === -1) {
+            return res.status(404).json({ error: 'Photo not found' });
+        }
+        
+        const photo = photosMetadata[photoIndex];
+        const currentAlbum = photo.album || DEFAULT_ALBUM;
+        
+        if (currentAlbum === targetAlbum) {
+            return res.status(400).json({ error: 'Photo is already in target album' });
+        }
+        
+        // Ensure target album exists
+        const targetAlbumPath = path.join(photosDir, targetAlbum);
+        if (!fs.existsSync(targetAlbumPath)) {
+            fs.mkdirSync(targetAlbumPath, { recursive: true });
+        }
+        
+        // Move the physical file
+        const currentPath = path.join(photosDir, currentAlbum, filename);
+        const targetPath = path.join(photosDir, targetAlbum, filename);
+        
+        if (!fs.existsSync(currentPath)) {
+            return res.status(404).json({ error: 'Photo file not found' });
+        }
+        
+        if (fs.existsSync(targetPath)) {
+            return res.status(409).json({ error: 'Photo with same name already exists in target album' });
+        }
+        
+        fs.renameSync(currentPath, targetPath);
+        
+        // Update metadata
+        photosMetadata[photoIndex].album = targetAlbum;
+        fs.writeFileSync(metadataFile, JSON.stringify(photosMetadata, null, 2));
+        
+        res.json({
+            success: true,
+            message: 'Photo moved successfully',
+            photo: photosMetadata[photoIndex]
+        });
+    } catch (error) {
+        console.error('Error moving photo:', error);
+        res.status(500).json({ error: 'Failed to move photo' });
+    }
 });
 
 // Error handling middleware
