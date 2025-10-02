@@ -2,7 +2,7 @@
 
 A web-based photo management application with drag-and-drop upload, metadata editing, and smart organization.
 
-**Version:** 0.2.0
+**Version:** 0.2.1
 
 ## Features
 
