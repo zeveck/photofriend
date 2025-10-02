@@ -1106,12 +1106,13 @@
                     const albumName = photo.album || 'default';
                     const showAlbumOverlay = albumName !== 'default';
                     const albumDisplayName = albumName.replace(/-/g, ' ');
+                    const timestamp = new Date().getTime();
 
                     photoItem.innerHTML = `
                         <div class="selection-checkbox" data-filename="${photo.filename}">
                             ${selectedPhotos.has(photo.filename) ? '✓' : ''}
                         </div>
-                        <img src="/photos/${albumName}/${photo.filename}" alt="${photo.title}">
+                        <img src="/photos/${albumName}/${photo.filename}?t=${timestamp}" alt="${photo.title}">
                         ${showAlbumOverlay ? `<div class="album-overlay">${albumDisplayName}</div>` : ''}
                         <div class="photo-info">
                             <div>${photo.title}</div>
@@ -1162,7 +1163,9 @@
         }
 
         function showPhotoDetails(photo) {
-            modalImage.src = `/photos/${photo.album || 'default'}/${photo.filename}`;
+            // Add timestamp to prevent caching of cropped images
+            const timestamp = new Date().getTime();
+            modalImage.src = `/photos/${photo.album || 'default'}/${photo.filename}?t=${timestamp}`;
             modalImage.alt = photo.title;
             
             let detailsHTML = '';
@@ -1409,6 +1412,8 @@
         let dragStartY = 0;
         let cropStartX = 0;
         let cropStartY = 0;
+        let cropStartWidth = 0;
+        let cropStartHeight = 0;
         let activeHandle = null;
 
         function startCrop(filename) {
@@ -1436,8 +1441,8 @@
                 const imgLeft = imgRect.left - containerRect.left;
                 const imgTop = imgRect.top - containerRect.top;
 
-                // Set initial crop box to center of image (square)
-                const size = Math.min(imgRect.width, imgRect.height) * 0.5;
+                // Set initial crop box to be as large as possible, centered
+                const size = Math.min(imgRect.width, imgRect.height) * 0.85;
                 const left = imgLeft + (imgRect.width - size) / 2;
                 const top = imgTop + (imgRect.height - size) / 2;
 
@@ -1455,16 +1460,17 @@
 
         window.startCrop = startCrop;
 
-        // Crop box dragging
+        // Crop box dragging and resizing
         document.getElementById('cropBox').addEventListener('mousedown', function(e) {
             if (e.target.classList.contains('crop-handle')) {
                 isResizing = true;
                 activeHandle = e.target;
                 dragStartX = e.clientX;
                 dragStartY = e.clientY;
-                const rect = cropBox.getBoundingClientRect();
-                cropStartX = rect.left;
-                cropStartY = rect.top;
+                cropStartX = cropBox.offsetLeft;
+                cropStartY = cropBox.offsetTop;
+                cropStartWidth = cropBox.offsetWidth;
+                cropStartHeight = cropBox.offsetHeight;
             } else {
                 isDraggingCrop = true;
                 dragStartX = e.clientX - cropBox.offsetLeft;
@@ -1492,30 +1498,74 @@
                 cropBox.style.left = newLeft + 'px';
                 cropBox.style.top = newTop + 'px';
             } else if (isResizing && activeHandle) {
-                const deltaX = e.clientX - dragStartX;
-                const deltaY = e.clientY - dragStartY;
-
-                // For square crop, use the larger delta
-                const delta = Math.max(Math.abs(deltaX), Math.abs(deltaY));
-                const sign = (deltaX + deltaY) > 0 ? 1 : -1;
-                const newSize = Math.max(50, parseInt(cropBox.style.width) + (delta * sign));
-
-                // Constrain to image bounds
                 const modalImage = document.getElementById('modalImage');
                 const imgRect = modalImage.getBoundingClientRect();
                 const containerRect = modalImage.parentElement.getBoundingClientRect();
                 const imgLeft = imgRect.left - containerRect.left;
                 const imgTop = imgRect.top - containerRect.top;
 
-                const maxSize = Math.min(
-                    imgRect.width - (cropBox.offsetLeft - imgLeft),
-                    imgRect.height - (cropBox.offsetTop - imgTop)
-                );
+                const deltaX = e.clientX - dragStartX;
+                const deltaY = e.clientY - dragStartY;
 
-                const finalSize = Math.min(newSize, maxSize);
+                // Determine which corner/handle is being dragged
+                const handleClass = activeHandle.className.split(' ')[1]; // Gets 'nw', 'ne', 'sw', or 'se'
 
-                cropBox.style.width = finalSize + 'px';
-                cropBox.style.height = finalSize + 'px';
+                let newLeft = cropStartX;
+                let newTop = cropStartY;
+                let newSize = cropStartWidth;
+
+                // Calculate size change based on which handle is dragged
+                // For square crop, we use the maximum absolute delta
+                let sizeDelta = 0;
+
+                if (handleClass === 'se') {
+                    // Bottom-right: both deltas increase size
+                    sizeDelta = Math.max(deltaX, deltaY);
+                } else if (handleClass === 'nw') {
+                    // Top-left: both deltas decrease size (negative deltas increase)
+                    sizeDelta = -Math.min(deltaX, deltaY);
+                    newLeft = cropStartX - sizeDelta;
+                    newTop = cropStartY - sizeDelta;
+                } else if (handleClass === 'ne') {
+                    // Top-right: deltaX increases, deltaY decreases
+                    sizeDelta = Math.max(deltaX, -deltaY);
+                    newTop = cropStartY - sizeDelta;
+                } else if (handleClass === 'sw') {
+                    // Bottom-left: deltaX decreases, deltaY increases
+                    sizeDelta = Math.max(-deltaX, deltaY);
+                    newLeft = cropStartX - sizeDelta;
+                }
+
+                newSize = Math.max(50, cropStartWidth + sizeDelta);
+
+                // Constrain to image bounds
+                // Check right edge
+                if (newLeft + newSize > imgLeft + imgRect.width) {
+                    newSize = imgLeft + imgRect.width - newLeft;
+                }
+                // Check bottom edge
+                if (newTop + newSize > imgTop + imgRect.height) {
+                    newSize = imgTop + imgRect.height - newTop;
+                }
+                // Check left edge
+                if (newLeft < imgLeft) {
+                    newSize = newSize - (imgLeft - newLeft);
+                    newLeft = imgLeft;
+                }
+                // Check top edge
+                if (newTop < imgTop) {
+                    newSize = newSize - (imgTop - newTop);
+                    newTop = imgTop;
+                }
+
+                // Ensure minimum size
+                newSize = Math.max(50, newSize);
+
+                // Apply the new dimensions
+                cropBox.style.left = newLeft + 'px';
+                cropBox.style.top = newTop + 'px';
+                cropBox.style.width = newSize + 'px';
+                cropBox.style.height = newSize + 'px';
             }
         });
 
