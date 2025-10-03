@@ -82,6 +82,50 @@
             display: block;
         }
 
+        /* Side-by-side layout when preview is shown */
+        .upload-section:has(.metadata-form.active) {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 30px;
+            align-items: start;
+        }
+
+        .upload-section:has(.metadata-form.active) .dropzone {
+            display: none;
+        }
+
+        .upload-section:has(.metadata-form.active) .preview-container {
+            grid-column: 1;
+        }
+
+        .upload-section:has(.metadata-form.active) .metadata-form {
+            grid-column: 2;
+            margin-top: 0;
+            padding-top: 0;
+            border-top: none;
+        }
+
+        .upload-section:has(.metadata-form.active) .upload-status {
+            grid-column: 1 / -1;
+        }
+
+        @media (max-width: 1024px) {
+            .upload-section:has(.metadata-form.active) {
+                grid-template-columns: 1fr;
+            }
+
+            .upload-section:has(.metadata-form.active) .preview-container,
+            .upload-section:has(.metadata-form.active) .metadata-form {
+                grid-column: 1;
+            }
+
+            .upload-section:has(.metadata-form.active) .metadata-form {
+                margin-top: 20px;
+                padding-top: 20px;
+                border-top: 1px solid #e0e0e0;
+            }
+        }
+
         .form-group {
             margin-bottom: 15px;
         }
@@ -510,7 +554,9 @@
 
         .preview-image {
             width: 100%;
+            max-height: min(600px, 70vh);
             height: auto;
+            object-fit: contain;
             margin: 15px 0;
             border-radius: 10px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
@@ -523,6 +569,9 @@
             align-items: center;
             margin-top: 20px;
             gap: 20px;
+            max-height: 70vh;
+            overflow-y: auto;
+            padding-right: 10px;
         }
 
         .empty-state {
@@ -1703,6 +1752,6 @@
         loadPhotos();
     </script>
     
-    <div class="version">v0.2.1</div>
+    <div class="version">v0.2.2</div>
 </body>
 </html>
