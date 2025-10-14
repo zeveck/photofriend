@@ -2,7 +2,7 @@
 
 A web-based photo management application with drag-and-drop upload, metadata editing, and smart organization.
 
-**Version:** 0.2.1
+**Version:** 0.2.2
 
 ## Features
 
@@ -15,7 +15,10 @@ A web-based photo management application with drag-and-drop upload, metadata edi
 - **Smart File Naming** - Automatically names files based on date and metadata
 - **Image Processing** - Auto-rotates and optimizes images (including WebP to JPG conversion)
 - **Sortable Gallery** - View photos by newest or oldest first
-- **Inline Editing** - Click to edit photo dates directly in the detail view
+- **Photo Navigation** - Navigate between photos with prev/next buttons and arrow keys
+- **Inline Editing** - Edit all metadata fields (title, date, location, tags, description) directly in the detail view
+- **Image Cropping** - Crop images with interactive crop tool and undo functionality
+- **Photo Deletion** - Delete photos with confirmation prompt
 - **Bulk Operations** - Select multiple photos and move them to albums at once
 - **Persistent Preferences** - Remembers your sort preferences
 

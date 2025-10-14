@@ -676,6 +676,42 @@
             background: #764ba2;
         }
 
+        .modal-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0, 0, 0, 0.5);
+            border: none;
+            color: white;
+            font-size: 40px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s;
+            z-index: 10;
+        }
+
+        .modal-nav:hover {
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        .modal-nav:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .modal-nav-prev {
+            left: 20px;
+        }
+
+        .modal-nav-next {
+            right: 370px; /* Account for sidebar width */
+        }
+
         .version {
             position: fixed;
             bottom: 10px;
@@ -785,6 +821,8 @@
     <div class="modal" id="photoModal">
         <div class="modal-content">
             <button class="modal-close" id="modalClose">&times;</button>
+            <button class="modal-nav modal-nav-prev" id="modalPrevBtn">‹</button>
+            <button class="modal-nav modal-nav-next" id="modalNextBtn">›</button>
             <div class="modal-image-container">
                 <img class="modal-image" id="modalImage" src="" alt="">
                 <div class="crop-overlay" id="cropOverlay">
@@ -1218,15 +1256,7 @@
             modalImage.alt = photo.title;
             
             let detailsHTML = '';
-            if (photo.title) {
-                detailsHTML += `
-                    <div class="detail-row">
-                        <div class="detail-label">Title</div>
-                        <div class="detail-value">${photo.title}</div>
-                    </div>
-                `;
-            }
-            
+
             // Add Crop button
             detailsHTML += `
                 <div class="detail-row">
@@ -1235,6 +1265,26 @@
                 <div class="detail-row" id="undoCropRow-${photo.filename}" style="display: none;">
                     <button class="btn" style="width: 100%; margin-bottom: 10px; background: #dc3545;" onclick="undoCrop('${photo.filename}')">↶ Undo Crop</button>
                 </div>
+                <div class="detail-row">
+                    <button class="btn" id="deleteBtn-${photo.filename}" style="width: 100%; margin-bottom: 10px; background: #6c757d;" onclick="confirmDelete('${photo.filename}', '${photo.album || 'default'}')">🗑️ Delete Photo</button>
+                </div>
+                <div class="detail-row" id="deleteConfirmRow-${photo.filename}" style="display: none;">
+                    <button class="btn" style="width: 100%; margin-bottom: 10px; background: #dc3545;" onclick="deletePhoto('${photo.filename}', '${photo.album || 'default'}')">⚠️ Confirm Delete</button>
+                </div>
+            `;
+
+            // Editable title field
+            detailsHTML += `
+                <div class="detail-row">
+                    <div class="detail-label">Title</div>
+                    <div class="detail-value">
+                        <input type="text"
+                               id="editTitle-${photo.filename}"
+                               value="${photo.title || ''}"
+                               style="border: 1px solid #ddd; padding: 5px; border-radius: 3px; width: 100%;"
+                               onchange="updatePhotoMetadata('${photo.filename}', 'title', this.value)">
+                    </div>
+                </div>
             `;
 
             // Editable date field
@@ -1242,38 +1292,56 @@
                 <div class="detail-row">
                     <div class="detail-label">Date</div>
                     <div class="detail-value">
-                        <input type="date" 
-                               id="editDate-${photo.filename}" 
-                               value="${photo.date || ''}" 
-                               style="border: 1px solid #ddd; padding: 5px; border-radius: 3px; width: 200px;"
+                        <input type="date"
+                               id="editDate-${photo.filename}"
+                               value="${photo.date || ''}"
+                               style="border: 1px solid #ddd; padding: 5px; border-radius: 3px; width: 100%;"
                                onchange="updatePhotoDate('${photo.filename}', this.value)">
                     </div>
                 </div>
             `;
-            if (photo.location) {
-                detailsHTML += `
-                    <div class="detail-row">
-                        <div class="detail-label">Location</div>
-                        <div class="detail-value">${photo.location}</div>
+
+            // Editable location field
+            detailsHTML += `
+                <div class="detail-row">
+                    <div class="detail-label">Location</div>
+                    <div class="detail-value">
+                        <input type="text"
+                               id="editLocation-${photo.filename}"
+                               value="${photo.location || ''}"
+                               style="border: 1px solid #ddd; padding: 5px; border-radius: 3px; width: 100%;"
+                               onchange="updatePhotoMetadata('${photo.filename}', 'location', this.value)">
                     </div>
-                `;
-            }
-            if (photo.tags) {
-                detailsHTML += `
-                    <div class="detail-row">
-                        <div class="detail-label">Tags</div>
-                        <div class="detail-value">${photo.tags}</div>
+                </div>
+            `;
+
+            // Editable tags field
+            detailsHTML += `
+                <div class="detail-row">
+                    <div class="detail-label">Tags</div>
+                    <div class="detail-value">
+                        <input type="text"
+                               id="editTags-${photo.filename}"
+                               value="${photo.tags || ''}"
+                               style="border: 1px solid #ddd; padding: 5px; border-radius: 3px; width: 100%;"
+                               placeholder="comma-separated"
+                               onchange="updatePhotoMetadata('${photo.filename}', 'tags', this.value)">
                     </div>
-                `;
-            }
-            if (photo.description) {
-                detailsHTML += `
-                    <div class="detail-row">
-                        <div class="detail-label">Description</div>
-                        <div class="detail-value">${photo.description}</div>
+                </div>
+            `;
+
+            // Editable description field
+            detailsHTML += `
+                <div class="detail-row">
+                    <div class="detail-label">Description</div>
+                    <div class="detail-value">
+                        <textarea
+                               id="editDescription-${photo.filename}"
+                               style="border: 1px solid #ddd; padding: 5px; border-radius: 3px; width: 100%; min-height: 80px; resize: vertical;"
+                               onchange="updatePhotoMetadata('${photo.filename}', 'description', this.value)">${photo.description || ''}</textarea>
                     </div>
-                `;
-            }
+                </div>
+            `;
             if (photo.filename) {
                 detailsHTML += `
                     <div class="detail-row">
@@ -1290,13 +1358,89 @@
             checkBackupExists(photo.filename);
         }
 
+        // Track current photo index for navigation
+        let currentPhotoIndex = -1;
+
+        // Get filtered and sorted photos for navigation
+        function getDisplayedPhotos() {
+            let filteredPhotos = photos;
+            if (currentAlbumFilter) {
+                filteredPhotos = photos.filter(photo => (photo.album || 'default') === currentAlbumFilter);
+            }
+            return [...filteredPhotos].sort((a, b) => {
+                const dateA = new Date(a.date || 0);
+                const dateB = new Date(b.date || 0);
+                return sortNewestFirst ? dateB - dateA : dateA - dateB;
+            });
+        }
+
+        // Navigate to previous or next photo
+        function navigatePhoto(direction) {
+            const displayedPhotos = getDisplayedPhotos();
+            currentPhotoIndex += direction;
+
+            if (currentPhotoIndex >= 0 && currentPhotoIndex < displayedPhotos.length) {
+                showPhotoDetails(displayedPhotos[currentPhotoIndex]);
+                updateNavButtons(displayedPhotos.length);
+            }
+        }
+
+        // Update navigation button states
+        function updateNavButtons(totalPhotos) {
+            const prevBtn = document.getElementById('modalPrevBtn');
+            const nextBtn = document.getElementById('modalNextBtn');
+
+            if (prevBtn && nextBtn) {
+                prevBtn.disabled = currentPhotoIndex <= 0;
+                nextBtn.disabled = currentPhotoIndex >= totalPhotos - 1;
+            }
+        }
+
+        // Modified showPhotoDetails to set current index
+        const originalShowPhotoDetails = showPhotoDetails;
+        showPhotoDetails = function(photo) {
+            const displayedPhotos = getDisplayedPhotos();
+            currentPhotoIndex = displayedPhotos.findIndex(p => p.filename === photo.filename);
+            originalShowPhotoDetails(photo);
+            updateNavButtons(displayedPhotos.length);
+        };
+
         modalClose.addEventListener('click', () => {
             photoModal.classList.remove('active');
+            currentPhotoIndex = -1;
         });
 
         photoModal.addEventListener('click', (e) => {
             if (e.target === photoModal) {
                 photoModal.classList.remove('active');
+                currentPhotoIndex = -1;
+            }
+        });
+
+        // Add event listeners for navigation buttons
+        document.getElementById('modalPrevBtn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            navigatePhoto(-1);
+        });
+
+        document.getElementById('modalNextBtn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            navigatePhoto(1);
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (photoModal.classList.contains('active')) {
+                if (e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    navigatePhoto(-1);
+                } else if (e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    navigatePhoto(1);
+                } else if (e.key === 'Escape') {
+                    photoModal.classList.remove('active');
+                    currentPhotoIndex = -1;
+                }
             }
         });
 
@@ -1746,6 +1890,72 @@
                 console.error('Error checking backup:', error);
             }
         }
+
+        // Delete photo functionality
+        function confirmDelete(filename) {
+            // Hide the delete button and show the confirm button
+            const deleteBtn = document.getElementById(`deleteBtn-${filename}`);
+            const confirmRow = document.getElementById(`deleteConfirmRow-${filename}`);
+
+            if (deleteBtn) deleteBtn.style.display = 'none';
+            if (confirmRow) confirmRow.style.display = 'block';
+        }
+
+        async function deletePhoto(filename, album) {
+            try {
+                const response = await fetch(`/api/photos/${filename}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    // Close modal
+                    photoModal.classList.remove('active');
+
+                    // Reload photos and albums
+                    await loadPhotos();
+                    loadAlbums();
+                    displayPhotos();
+                } else {
+                    const error = await response.json();
+                    alert('Failed to delete photo: ' + (error.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error deleting photo:', error);
+                alert('Error deleting photo');
+            }
+        }
+
+        window.confirmDelete = confirmDelete;
+        window.deletePhoto = deletePhoto;
+
+        // Generic function to update photo metadata
+        async function updatePhotoMetadata(filename, field, value) {
+            try {
+                const response = await fetch(`/api/photos/${filename}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ [field]: value })
+                });
+
+                if (response.ok) {
+                    // Update local photos array
+                    const photoIndex = photos.findIndex(p => p.filename === filename);
+                    if (photoIndex !== -1) {
+                        photos[photoIndex][field] = value;
+                        displayPhotos(); // Refresh the gallery
+                    }
+                } else {
+                    alert(`Failed to update ${field}`);
+                }
+            } catch (error) {
+                console.error(`Error updating ${field}:`, error);
+                alert(`Error updating ${field}`);
+            }
+        }
+
+        window.updatePhotoMetadata = updatePhotoMetadata;
 
         // Load albums and photos on page load
         loadAlbums();
