@@ -347,6 +347,35 @@
             white-space: nowrap;
         }
 
+        .photo-item .hot-button {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.3s, transform 0.2s;
+            pointer-events: none;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            z-index: 5;
+        }
+
+        .photo-item:hover .hot-button {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .photo-item .hot-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.4);
+        }
+
         .photo-item:hover .selection-checkbox,
         .photo-item.selected .selection-checkbox {
             display: flex;
@@ -850,6 +879,7 @@
         let isDragging = false;
         let draggedPhoto = null;
         let selectedPhotos = new Set();
+        let lastMovedToAlbum = localStorage.getItem('lastMovedToAlbum') || null; // Track most recently moved-to folder
 
         // Set today's date as default
         document.getElementById('photoDate').valueAsDate = new Date();
@@ -1114,14 +1144,18 @@
                     },
                     body: JSON.stringify({ targetAlbum })
                 });
-                
+
                 if (response.ok) {
                     // Update local photos array
                     const photoIndex = photos.findIndex(p => p.filename === filename);
                     if (photoIndex !== -1) {
                         photos[photoIndex].album = targetAlbum;
                     }
-                    
+
+                    // Update last moved-to album
+                    lastMovedToAlbum = targetAlbum;
+                    localStorage.setItem('lastMovedToAlbum', targetAlbum);
+
                     // Refresh displays
                     loadAlbums();
                     displayPhotos();
@@ -1195,12 +1229,17 @@
                     const albumDisplayName = albumName.replace(/-/g, ' ');
                     const timestamp = new Date().getTime();
 
+                    // Show hot button if there's a recent album and this photo isn't already in it
+                    const showHotButton = lastMovedToAlbum && lastMovedToAlbum !== albumName;
+                    const hotButtonDisplayName = lastMovedToAlbum ? lastMovedToAlbum.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : '';
+
                     photoItem.innerHTML = `
                         <div class="selection-checkbox" data-filename="${photo.filename}">
                             ${selectedPhotos.has(photo.filename) ? '✓' : ''}
                         </div>
                         <img src="/photos/${albumName}/${photo.filename}?t=${timestamp}" alt="${photo.title}">
                         ${showAlbumOverlay ? `<div class="album-overlay">${albumDisplayName}</div>` : ''}
+                        ${showHotButton ? `<div class="hot-button" data-album="${lastMovedToAlbum}">${hotButtonDisplayName}</div>` : ''}
                         <div class="photo-info">
                             <div>${photo.title}</div>
                             <div style="font-size: 0.8rem;">${photo.date || ''}</div>
@@ -1233,7 +1272,19 @@
                         e.stopPropagation();
                         togglePhotoSelection(photo.filename);
                     });
-                    
+
+                    // Add hot button click handler
+                    const hotButton = photoItem.querySelector('.hot-button');
+                    if (hotButton) {
+                        hotButton.addEventListener('click', async (e) => {
+                            e.stopPropagation();
+                            const targetAlbum = hotButton.dataset.album;
+                            if (targetAlbum) {
+                                await movePhotoToAlbum(photo.filename, targetAlbum);
+                            }
+                        });
+                    }
+
                     photoItem.addEventListener('click', (e) => {
                         // If ctrl/cmd is held, toggle selection instead of showing details
                         if (e.ctrlKey || e.metaKey) {
@@ -1580,12 +1631,18 @@
                 }
             }
 
+            // Update last moved-to album
+            if (successCount > 0) {
+                lastMovedToAlbum = targetAlbum;
+                localStorage.setItem('lastMovedToAlbum', targetAlbum);
+            }
+
             // Clear selection and refresh
             selectedPhotos.clear();
             loadAlbums();
             displayPhotos();
             updateBulkActionsUI();
-            
+
             // Photos moved successfully - no alert needed
         }
 
