@@ -27,7 +27,8 @@
       "mcp__playwright__browser_wait_for",
       "Bash(npm start)",
       "Bash(curl:*)",
-      "Bash(npx playwright:*)"
+      "Bash(npx playwright:*)",
+      "Bash(gh pr create:*)"
     ],
     "deny": [],
     "ask": []
