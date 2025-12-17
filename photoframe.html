@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PhotoFriend - Photo Manager</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📷</text></svg>">
     <style>
         * {
             margin: 0;
@@ -428,6 +429,8 @@
             transition: transform 0.3s;
             background: #f5f5f5;
             aspect-ratio: 1;
+            content-visibility: auto;
+            contain-intrinsic-size: 220px 220px;
         }
 
         .photo-item:hover {
@@ -651,6 +654,34 @@
             display: flex;
             gap: 10px;
             z-index: 100;
+            align-items: center;
+        }
+
+        .aspect-ratio-selector {
+            display: flex;
+            gap: 5px;
+            margin-right: 10px;
+        }
+
+        .aspect-ratio-btn {
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.7);
+            border: 2px solid transparent;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .aspect-ratio-btn:hover {
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        .aspect-ratio-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
         }
 
         .crop-btn {
@@ -834,6 +865,10 @@
                     </div>
                 </div>
                 <div class="crop-controls" id="cropControls" style="display: none;">
+                    <div class="aspect-ratio-selector">
+                        <button class="aspect-ratio-btn active" data-ratio="1:1" id="ratio1to1">1:1</button>
+                        <button class="aspect-ratio-btn" data-ratio="4:5" id="ratio4to5">4:5</button>
+                    </div>
                     <button class="crop-btn" id="cancelCropBtn">Cancel</button>
                     <button class="crop-btn primary" id="applyCropBtn">Apply Crop</button>
                 </div>
@@ -1176,15 +1211,16 @@
                 `;
                 photoCount.textContent = '0 photos';
             } else {
-                photoGrid.innerHTML = '';
-                
                 // Sort photos by date
                 const sortedPhotos = [...filteredPhotos].sort((a, b) => {
                     const dateA = new Date(a.date || 0);
                     const dateB = new Date(b.date || 0);
                     return sortNewestFirst ? dateB - dateA : dateA - dateB;
                 });
-                
+
+                // Build all items in a fragment first to prevent white flash
+                const fragment = document.createDocumentFragment();
+
                 sortedPhotos.forEach((photo, index) => {
                     const photoItem = document.createElement('div');
                     photoItem.className = 'photo-item';
@@ -1206,12 +1242,12 @@
                             <div style="font-size: 0.8rem;">${photo.date || ''}</div>
                         </div>
                     `;
-                    
+
                     // Check if this photo is selected
                     if (selectedPhotos.has(photo.filename)) {
                         photoItem.classList.add('selected');
                     }
-                    
+
                     // Add drag event listeners
                     photoItem.addEventListener('dragstart', (e) => {
                         isDragging = true;
@@ -1219,21 +1255,21 @@
                         photoItem.classList.add('dragging');
                         showDropZones();
                     });
-                    
+
                     photoItem.addEventListener('dragend', (e) => {
                         photoItem.classList.remove('dragging');
                         if (!isDragging) {
                             hideDropZones();
                         }
                     });
-                    
+
                     // Add selection checkbox click handler
                     const checkbox = photoItem.querySelector('.selection-checkbox');
                     checkbox.addEventListener('click', (e) => {
                         e.stopPropagation();
                         togglePhotoSelection(photo.filename);
                     });
-                    
+
                     photoItem.addEventListener('click', (e) => {
                         // If ctrl/cmd is held, toggle selection instead of showing details
                         if (e.ctrlKey || e.metaKey) {
@@ -1242,9 +1278,13 @@
                             showPhotoDetails(photo);
                         }
                     });
-                    
-                    photoGrid.appendChild(photoItem);
+
+                    fragment.appendChild(photoItem);
                 });
+
+                // Replace all content at once to prevent flash
+                photoGrid.innerHTML = '';
+                photoGrid.appendChild(fragment);
                 photoCount.textContent = `${filteredPhotos.length} photo${filteredPhotos.length !== 1 ? 's' : ''}${currentAlbumFilter ? ` in ${currentAlbumFilter}` : ''}`;
             }
         }
@@ -1608,6 +1648,33 @@
         let cropStartWidth = 0;
         let cropStartHeight = 0;
         let activeHandle = null;
+        let currentAspectRatio = '1:1'; // Default aspect ratio
+
+        // Aspect ratio helpers
+        function getAspectRatioValue(ratio) {
+            switch(ratio) {
+                case '1:1': return 1;
+                case '4:5': return 4/5;
+                default: return 1;
+            }
+        }
+
+        function calculateCropDimensions(containerWidth, containerHeight, aspectRatio) {
+            const ratio = getAspectRatioValue(aspectRatio);
+            let width, height;
+
+            if (ratio >= 1) {
+                // Wider or square (e.g., 1:1)
+                height = Math.min(containerHeight, containerWidth / ratio) * 0.85;
+                width = height * ratio;
+            } else {
+                // Taller (e.g., 4:5)
+                width = Math.min(containerWidth, containerHeight * ratio) * 0.85;
+                height = width / ratio;
+            }
+
+            return { width, height };
+        }
 
         function startCrop(filename) {
             const photo = photos.find(p => p.filename === filename);
@@ -1615,6 +1682,12 @@
 
             currentCropPhoto = photo;
             cropMode = true;
+
+            // Reset aspect ratio to default
+            currentAspectRatio = '1:1';
+            document.querySelectorAll('.aspect-ratio-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.ratio === currentAspectRatio);
+            });
 
             // Show crop overlay
             cropOverlay = document.getElementById('cropOverlay');
@@ -1627,28 +1700,33 @@
 
             // Wait for image to load and get dimensions
             modalImage.onload = function() {
-                const imgRect = modalImage.getBoundingClientRect();
-                const containerRect = modalImage.parentElement.getBoundingClientRect();
-
-                // Calculate image position within container
-                const imgLeft = imgRect.left - containerRect.left;
-                const imgTop = imgRect.top - containerRect.top;
-
-                // Set initial crop box to be as large as possible, centered
-                const size = Math.min(imgRect.width, imgRect.height) * 0.85;
-                const left = imgLeft + (imgRect.width - size) / 2;
-                const top = imgTop + (imgRect.height - size) / 2;
-
-                cropBox.style.left = left + 'px';
-                cropBox.style.top = top + 'px';
-                cropBox.style.width = size + 'px';
-                cropBox.style.height = size + 'px';
+                initializeCropBox();
             };
 
             // Trigger load event if image already loaded
             if (modalImage.complete) {
-                modalImage.onload();
+                initializeCropBox();
             }
+        }
+
+        function initializeCropBox() {
+            const modalImage = document.getElementById('modalImage');
+            const imgRect = modalImage.getBoundingClientRect();
+            const containerRect = modalImage.parentElement.getBoundingClientRect();
+
+            // Calculate image position within container
+            const imgLeft = imgRect.left - containerRect.left;
+            const imgTop = imgRect.top - containerRect.top;
+
+            // Calculate crop dimensions based on aspect ratio
+            const { width, height } = calculateCropDimensions(imgRect.width, imgRect.height, currentAspectRatio);
+            const left = imgLeft + (imgRect.width - width) / 2;
+            const top = imgTop + (imgRect.height - height) / 2;
+
+            cropBox.style.left = left + 'px';
+            cropBox.style.top = top + 'px';
+            cropBox.style.width = width + 'px';
+            cropBox.style.height = height + 'px';
         }
 
         window.startCrop = startCrop;
@@ -1703,62 +1781,114 @@
                 // Determine which corner/handle is being dragged
                 const handleClass = activeHandle.className.split(' ')[1]; // Gets 'nw', 'ne', 'sw', or 'se'
 
+                const aspectRatio = getAspectRatioValue(currentAspectRatio);
+
                 let newLeft = cropStartX;
                 let newTop = cropStartY;
-                let newSize = cropStartWidth;
+                let newWidth = cropStartWidth;
+                let newHeight = cropStartHeight;
 
                 // Calculate size change based on which handle is dragged
-                // For square crop, we use the maximum absolute delta
-                let sizeDelta = 0;
-
+                // We calculate based on one dimension and derive the other from aspect ratio
                 if (handleClass === 'se') {
-                    // Bottom-right: both deltas increase size
-                    sizeDelta = Math.max(deltaX, deltaY);
+                    // Bottom-right: increase both
+                    const widthDelta = deltaX;
+                    const heightDelta = deltaY;
+                    // Use the larger delta proportionally
+                    if (Math.abs(widthDelta) * (1/aspectRatio) > Math.abs(heightDelta)) {
+                        newWidth = cropStartWidth + widthDelta;
+                        newHeight = newWidth / aspectRatio;
+                    } else {
+                        newHeight = cropStartHeight + heightDelta;
+                        newWidth = newHeight * aspectRatio;
+                    }
                 } else if (handleClass === 'nw') {
-                    // Top-left: both deltas decrease size (negative deltas increase)
-                    sizeDelta = -Math.min(deltaX, deltaY);
-                    newLeft = cropStartX - sizeDelta;
-                    newTop = cropStartY - sizeDelta;
+                    // Top-left: negative deltas increase size
+                    const widthDelta = -deltaX;
+                    const heightDelta = -deltaY;
+                    if (Math.abs(widthDelta) * (1/aspectRatio) > Math.abs(heightDelta)) {
+                        newWidth = cropStartWidth + widthDelta;
+                        newHeight = newWidth / aspectRatio;
+                    } else {
+                        newHeight = cropStartHeight + heightDelta;
+                        newWidth = newHeight * aspectRatio;
+                    }
+                    newLeft = cropStartX + cropStartWidth - newWidth;
+                    newTop = cropStartY + cropStartHeight - newHeight;
                 } else if (handleClass === 'ne') {
-                    // Top-right: deltaX increases, deltaY decreases
-                    sizeDelta = Math.max(deltaX, -deltaY);
-                    newTop = cropStartY - sizeDelta;
+                    // Top-right: deltaX increases width, negative deltaY increases height
+                    const widthDelta = deltaX;
+                    const heightDelta = -deltaY;
+                    if (Math.abs(widthDelta) * (1/aspectRatio) > Math.abs(heightDelta)) {
+                        newWidth = cropStartWidth + widthDelta;
+                        newHeight = newWidth / aspectRatio;
+                    } else {
+                        newHeight = cropStartHeight + heightDelta;
+                        newWidth = newHeight * aspectRatio;
+                    }
+                    newTop = cropStartY + cropStartHeight - newHeight;
                 } else if (handleClass === 'sw') {
-                    // Bottom-left: deltaX decreases, deltaY increases
-                    sizeDelta = Math.max(-deltaX, deltaY);
-                    newLeft = cropStartX - sizeDelta;
-                }
-
-                newSize = Math.max(50, cropStartWidth + sizeDelta);
-
-                // Constrain to image bounds
-                // Check right edge
-                if (newLeft + newSize > imgLeft + imgRect.width) {
-                    newSize = imgLeft + imgRect.width - newLeft;
-                }
-                // Check bottom edge
-                if (newTop + newSize > imgTop + imgRect.height) {
-                    newSize = imgTop + imgRect.height - newTop;
-                }
-                // Check left edge
-                if (newLeft < imgLeft) {
-                    newSize = newSize - (imgLeft - newLeft);
-                    newLeft = imgLeft;
-                }
-                // Check top edge
-                if (newTop < imgTop) {
-                    newSize = newSize - (imgTop - newTop);
-                    newTop = imgTop;
+                    // Bottom-left: negative deltaX increases width, deltaY increases height
+                    const widthDelta = -deltaX;
+                    const heightDelta = deltaY;
+                    if (Math.abs(widthDelta) * (1/aspectRatio) > Math.abs(heightDelta)) {
+                        newWidth = cropStartWidth + widthDelta;
+                        newHeight = newWidth / aspectRatio;
+                    } else {
+                        newHeight = cropStartHeight + heightDelta;
+                        newWidth = newHeight * aspectRatio;
+                    }
+                    newLeft = cropStartX + cropStartWidth - newWidth;
                 }
 
                 // Ensure minimum size
-                newSize = Math.max(50, newSize);
+                const minWidth = 50;
+                const minHeight = minWidth / aspectRatio;
+                if (newWidth < minWidth) {
+                    newWidth = minWidth;
+                    newHeight = minHeight;
+                    // Recalculate positions for nw, sw, ne handles
+                    if (handleClass === 'nw') {
+                        newLeft = cropStartX + cropStartWidth - newWidth;
+                        newTop = cropStartY + cropStartHeight - newHeight;
+                    } else if (handleClass === 'ne') {
+                        newTop = cropStartY + cropStartHeight - newHeight;
+                    } else if (handleClass === 'sw') {
+                        newLeft = cropStartX + cropStartWidth - newWidth;
+                    }
+                }
+
+                // Constrain to image bounds
+                // Check right edge
+                if (newLeft + newWidth > imgLeft + imgRect.width) {
+                    newWidth = imgLeft + imgRect.width - newLeft;
+                    newHeight = newWidth / aspectRatio;
+                }
+                // Check bottom edge
+                if (newTop + newHeight > imgTop + imgRect.height) {
+                    newHeight = imgTop + imgRect.height - newTop;
+                    newWidth = newHeight * aspectRatio;
+                }
+                // Check left edge
+                if (newLeft < imgLeft) {
+                    const overflow = imgLeft - newLeft;
+                    newLeft = imgLeft;
+                    newWidth = newWidth - overflow;
+                    newHeight = newWidth / aspectRatio;
+                }
+                // Check top edge
+                if (newTop < imgTop) {
+                    const overflow = imgTop - newTop;
+                    newTop = imgTop;
+                    newHeight = newHeight - overflow;
+                    newWidth = newHeight * aspectRatio;
+                }
 
                 // Apply the new dimensions
                 cropBox.style.left = newLeft + 'px';
                 cropBox.style.top = newTop + 'px';
-                cropBox.style.width = newSize + 'px';
-                cropBox.style.height = newSize + 'px';
+                cropBox.style.width = newWidth + 'px';
+                cropBox.style.height = newHeight + 'px';
             }
         });
 
@@ -1774,6 +1904,23 @@
             currentCropPhoto = null;
             document.getElementById('cropOverlay').classList.remove('active');
             document.getElementById('cropControls').style.display = 'none';
+        });
+
+        // Aspect ratio button handlers
+        document.querySelectorAll('.aspect-ratio-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                currentAspectRatio = this.dataset.ratio;
+
+                // Update button states
+                document.querySelectorAll('.aspect-ratio-btn').forEach(b => {
+                    b.classList.toggle('active', b === this);
+                });
+
+                // Reinitialize crop box with new aspect ratio
+                if (cropMode) {
+                    initializeCropBox();
+                }
+            });
         });
 
         // Apply crop
@@ -1962,6 +2109,6 @@
         loadPhotos();
     </script>
     
-    <div class="version">v0.2.2</div>
+    <div class="version">v0.2.3</div>
 </body>
 </html>
