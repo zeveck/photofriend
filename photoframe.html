@@ -868,6 +868,7 @@
                     <div class="aspect-ratio-selector">
                         <button class="aspect-ratio-btn active" data-ratio="1:1" id="ratio1to1">1:1</button>
                         <button class="aspect-ratio-btn" data-ratio="4:5" id="ratio4to5">4:5</button>
+                        <button class="aspect-ratio-btn" data-ratio="free" id="ratioFree">Free</button>
                     </div>
                     <button class="crop-btn" id="cancelCropBtn">Cancel</button>
                     <button class="crop-btn primary" id="applyCropBtn">Apply Crop</button>
@@ -1655,6 +1656,7 @@
             switch(ratio) {
                 case '1:1': return 1;
                 case '4:5': return 4/5;
+                case 'free': return null; // No aspect ratio constraint
                 default: return 1;
             }
         }
@@ -1663,7 +1665,11 @@
             const ratio = getAspectRatioValue(aspectRatio);
             let width, height;
 
-            if (ratio >= 1) {
+            if (ratio === null) {
+                // Free-form: use 85% of the smaller dimension for both
+                width = containerWidth * 0.85;
+                height = containerHeight * 0.85;
+            } else if (ratio >= 1) {
                 // Wider or square (e.g., 1:1)
                 height = Math.min(containerHeight, containerWidth / ratio) * 0.85;
                 width = height * ratio;
@@ -1789,65 +1795,99 @@
                 let newHeight = cropStartHeight;
 
                 // Calculate size change based on which handle is dragged
-                // We calculate based on one dimension and derive the other from aspect ratio
-                if (handleClass === 'se') {
-                    // Bottom-right: increase both
-                    const widthDelta = deltaX;
-                    const heightDelta = deltaY;
-                    // Use the larger delta proportionally
-                    if (Math.abs(widthDelta) * (1/aspectRatio) > Math.abs(heightDelta)) {
-                        newWidth = cropStartWidth + widthDelta;
-                        newHeight = newWidth / aspectRatio;
-                    } else {
-                        newHeight = cropStartHeight + heightDelta;
-                        newWidth = newHeight * aspectRatio;
+                if (aspectRatio === null) {
+                    // Free-form: allow independent width/height resizing
+                    if (handleClass === 'se') {
+                        newWidth = cropStartWidth + deltaX;
+                        newHeight = cropStartHeight + deltaY;
+                    } else if (handleClass === 'nw') {
+                        newWidth = cropStartWidth - deltaX;
+                        newHeight = cropStartHeight - deltaY;
+                        newLeft = cropStartX + deltaX;
+                        newTop = cropStartY + deltaY;
+                    } else if (handleClass === 'ne') {
+                        newWidth = cropStartWidth + deltaX;
+                        newHeight = cropStartHeight - deltaY;
+                        newTop = cropStartY + deltaY;
+                    } else if (handleClass === 'sw') {
+                        newWidth = cropStartWidth - deltaX;
+                        newHeight = cropStartHeight + deltaY;
+                        newLeft = cropStartX + deltaX;
                     }
-                } else if (handleClass === 'nw') {
-                    // Top-left: negative deltas increase size
-                    const widthDelta = -deltaX;
-                    const heightDelta = -deltaY;
-                    if (Math.abs(widthDelta) * (1/aspectRatio) > Math.abs(heightDelta)) {
-                        newWidth = cropStartWidth + widthDelta;
-                        newHeight = newWidth / aspectRatio;
-                    } else {
-                        newHeight = cropStartHeight + heightDelta;
-                        newWidth = newHeight * aspectRatio;
+                } else {
+                    // Constrained aspect ratio: derive one dimension from the other
+                    if (handleClass === 'se') {
+                        // Bottom-right: increase both
+                        const widthDelta = deltaX;
+                        const heightDelta = deltaY;
+                        // Use the larger delta proportionally
+                        if (Math.abs(widthDelta) * (1/aspectRatio) > Math.abs(heightDelta)) {
+                            newWidth = cropStartWidth + widthDelta;
+                            newHeight = newWidth / aspectRatio;
+                        } else {
+                            newHeight = cropStartHeight + heightDelta;
+                            newWidth = newHeight * aspectRatio;
+                        }
+                    } else if (handleClass === 'nw') {
+                        // Top-left: negative deltas increase size
+                        const widthDelta = -deltaX;
+                        const heightDelta = -deltaY;
+                        if (Math.abs(widthDelta) * (1/aspectRatio) > Math.abs(heightDelta)) {
+                            newWidth = cropStartWidth + widthDelta;
+                            newHeight = newWidth / aspectRatio;
+                        } else {
+                            newHeight = cropStartHeight + heightDelta;
+                            newWidth = newHeight * aspectRatio;
+                        }
+                        newLeft = cropStartX + cropStartWidth - newWidth;
+                        newTop = cropStartY + cropStartHeight - newHeight;
+                    } else if (handleClass === 'ne') {
+                        // Top-right: deltaX increases width, negative deltaY increases height
+                        const widthDelta = deltaX;
+                        const heightDelta = -deltaY;
+                        if (Math.abs(widthDelta) * (1/aspectRatio) > Math.abs(heightDelta)) {
+                            newWidth = cropStartWidth + widthDelta;
+                            newHeight = newWidth / aspectRatio;
+                        } else {
+                            newHeight = cropStartHeight + heightDelta;
+                            newWidth = newHeight * aspectRatio;
+                        }
+                        newTop = cropStartY + cropStartHeight - newHeight;
+                    } else if (handleClass === 'sw') {
+                        // Bottom-left: negative deltaX increases width, deltaY increases height
+                        const widthDelta = -deltaX;
+                        const heightDelta = deltaY;
+                        if (Math.abs(widthDelta) * (1/aspectRatio) > Math.abs(heightDelta)) {
+                            newWidth = cropStartWidth + widthDelta;
+                            newHeight = newWidth / aspectRatio;
+                        } else {
+                            newHeight = cropStartHeight + heightDelta;
+                            newWidth = newHeight * aspectRatio;
+                        }
+                        newLeft = cropStartX + cropStartWidth - newWidth;
                     }
-                    newLeft = cropStartX + cropStartWidth - newWidth;
-                    newTop = cropStartY + cropStartHeight - newHeight;
-                } else if (handleClass === 'ne') {
-                    // Top-right: deltaX increases width, negative deltaY increases height
-                    const widthDelta = deltaX;
-                    const heightDelta = -deltaY;
-                    if (Math.abs(widthDelta) * (1/aspectRatio) > Math.abs(heightDelta)) {
-                        newWidth = cropStartWidth + widthDelta;
-                        newHeight = newWidth / aspectRatio;
-                    } else {
-                        newHeight = cropStartHeight + heightDelta;
-                        newWidth = newHeight * aspectRatio;
-                    }
-                    newTop = cropStartY + cropStartHeight - newHeight;
-                } else if (handleClass === 'sw') {
-                    // Bottom-left: negative deltaX increases width, deltaY increases height
-                    const widthDelta = -deltaX;
-                    const heightDelta = deltaY;
-                    if (Math.abs(widthDelta) * (1/aspectRatio) > Math.abs(heightDelta)) {
-                        newWidth = cropStartWidth + widthDelta;
-                        newHeight = newWidth / aspectRatio;
-                    } else {
-                        newHeight = cropStartHeight + heightDelta;
-                        newWidth = newHeight * aspectRatio;
-                    }
-                    newLeft = cropStartX + cropStartWidth - newWidth;
                 }
 
                 // Ensure minimum size
-                const minWidth = 50;
-                const minHeight = minWidth / aspectRatio;
+                const minSize = 50;
+                const minWidth = minSize;
+                const minHeight = aspectRatio === null ? minSize : minSize / aspectRatio;
                 if (newWidth < minWidth) {
                     newWidth = minWidth;
-                    newHeight = minHeight;
+                    if (aspectRatio !== null) newHeight = minHeight;
                     // Recalculate positions for nw, sw, ne handles
+                    if (handleClass === 'nw') {
+                        newLeft = cropStartX + cropStartWidth - newWidth;
+                        newTop = cropStartY + cropStartHeight - newHeight;
+                    } else if (handleClass === 'ne') {
+                        newTop = cropStartY + cropStartHeight - newHeight;
+                    } else if (handleClass === 'sw') {
+                        newLeft = cropStartX + cropStartWidth - newWidth;
+                    }
+                }
+                if (newHeight < minHeight) {
+                    newHeight = minHeight;
+                    if (aspectRatio !== null) newWidth = minWidth;
                     if (handleClass === 'nw') {
                         newLeft = cropStartX + cropStartWidth - newWidth;
                         newTop = cropStartY + cropStartHeight - newHeight;
@@ -1862,26 +1902,26 @@
                 // Check right edge
                 if (newLeft + newWidth > imgLeft + imgRect.width) {
                     newWidth = imgLeft + imgRect.width - newLeft;
-                    newHeight = newWidth / aspectRatio;
+                    if (aspectRatio !== null) newHeight = newWidth / aspectRatio;
                 }
                 // Check bottom edge
                 if (newTop + newHeight > imgTop + imgRect.height) {
                     newHeight = imgTop + imgRect.height - newTop;
-                    newWidth = newHeight * aspectRatio;
+                    if (aspectRatio !== null) newWidth = newHeight * aspectRatio;
                 }
                 // Check left edge
                 if (newLeft < imgLeft) {
                     const overflow = imgLeft - newLeft;
                     newLeft = imgLeft;
                     newWidth = newWidth - overflow;
-                    newHeight = newWidth / aspectRatio;
+                    if (aspectRatio !== null) newHeight = newWidth / aspectRatio;
                 }
                 // Check top edge
                 if (newTop < imgTop) {
                     const overflow = imgTop - newTop;
                     newTop = imgTop;
                     newHeight = newHeight - overflow;
-                    newWidth = newHeight * aspectRatio;
+                    if (aspectRatio !== null) newWidth = newHeight * aspectRatio;
                 }
 
                 // Apply the new dimensions
@@ -2109,6 +2149,6 @@
         loadPhotos();
     </script>
     
-    <div class="version">v0.2.3</div>
+    <div class="version">v0.2.4</div>
 </body>
 </html>
