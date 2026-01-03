@@ -419,9 +419,16 @@ app.post('/api/photos/:filename/crop', async (req, res) => {
             fs.copyFileSync(filePath, backupPath);
         }
 
+        // Get image metadata to validate and clamp crop bounds
+        const metadata = await sharp(filePath).metadata();
+        const clampedX = Math.max(0, Math.min(x, metadata.width - 1));
+        const clampedY = Math.max(0, Math.min(y, metadata.height - 1));
+        const clampedWidth = Math.max(1, Math.min(width, metadata.width - clampedX));
+        const clampedHeight = Math.max(1, Math.min(height, metadata.height - clampedY));
+
         // Perform the crop using sharp
         await sharp(filePath)
-            .extract({ left: x, top: y, width: width, height: height })
+            .extract({ left: clampedX, top: clampedY, width: clampedWidth, height: clampedHeight })
             .jpeg({ quality: 90, progressive: true })
             .toFile(filePath + '.tmp');
 

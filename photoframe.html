@@ -1979,12 +1979,15 @@
             const scaleX = modalImage.naturalWidth / imgRect.width;
             const scaleY = modalImage.naturalHeight / imgRect.height;
 
-            const cropData = {
-                x: Math.round((cropBox.offsetLeft - imgLeft) * scaleX),
-                y: Math.round((cropBox.offsetTop - imgTop) * scaleY),
+            let cropData = {
+                x: Math.max(0, Math.round((cropBox.offsetLeft - imgLeft) * scaleX)),
+                y: Math.max(0, Math.round((cropBox.offsetTop - imgTop) * scaleY)),
                 width: Math.round(cropBox.offsetWidth * scaleX),
                 height: Math.round(cropBox.offsetHeight * scaleY)
             };
+            // Clamp to image bounds to prevent "bad extract area" errors
+            cropData.width = Math.max(1, Math.min(cropData.width, modalImage.naturalWidth - cropData.x));
+            cropData.height = Math.max(1, Math.min(cropData.height, modalImage.naturalHeight - cropData.y));
 
             // Send crop request to server
             try {
